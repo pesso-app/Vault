@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vault">
+    <meta name="description" content="Gestor de contraseñas seguro y offline">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>Secure Vault</title>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <link rel="icon" type="image/png" href="icon-192x192.png">
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+</head>
+
+<body class="text-white overflow-x-hidden no-refresh">
+
+    <!-- Offline Indicator -->
+    <div id="offlineIndicator" class="offline-indicator">
+        Sin conexión - Modo offline activo
+    </div>
+
+    <!-- Install Banner -->
+    <div id="installBanner" class="hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-indigo-600 install-banner safe-bottom">
+        <div class="flex items-center justify-between max-w-lg mx-auto">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-semibold">Instalar Vault</p>
+                    <p class="text-xs text-indigo-200">Accede rápido desde tu pantalla de inicio</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="dismissInstall()" class="px-3 py-1 text-sm text-indigo-200">Ahora no</button>
+                <button onclick="installPWA()" class="px-4 py-2 bg-white text-indigo-600 rounded-lg font-semibold text-sm">Instalar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fondos animados -->
+    <div class="floating-shapes">
+        <div class="shape bg-purple-600 w-96 h-96 rounded-full top-0 left-0"></div>
+        <div class="shape bg-indigo-600 w-80 h-80 rounded-full bottom-0 right-0" style="animation-delay: -5s;"></div>
+        <div class="shape bg-blue-600 w-72 h-72 rounded-full top-1/2 left-1/2" style="animation-delay: -10s;"></div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="fixed inset-0 z-40 flex items-center justify-center p-4 safe-top safe-bottom">
+        <div class="glass rounded-2xl p-8 w-full max-w-md modal-enter">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold mb-2 glow-text">Vault</h1>
+                <p class="text-gray-400">Tu bóveda de contraseñas segura</p>
+                <p class="text-xs text-gray-500 mt-2">v2.0 • Funciona offline</p>
+            </div>
+
+            <div id="setupMode" class="hidden">
+                <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p class="text-sm text-yellow-200">🔒 Primera vez: Crea tu contraseña maestra para cifrar tus datos.</p>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Contraseña Maestra</label>
+                        <input type="password" id="newMasterPassword" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500" placeholder="Mínimo 8 caracteres">
+                        <div class="mt-2 h-1 bg-gray-700 rounded-full overflow-hidden">
+                            <div id="strengthBar" class="password-strength w-0 bg-red-500"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Confirmar Contraseña</label>
+                        <input type="password" id="confirmMasterPassword" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500" placeholder="Repite la contraseña">
+                    </div>
+                    <button onclick="setupMasterPassword()" class="btn-primary w-full py-3 rounded-xl font-semibold text-white mt-6 touch-feedback">
+                        Crear Bóveda
+                    </button>
+                </div>
+            </div>
+
+            <div id="unlockMode">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-300">Contraseña Maestra</label>
+                        <input type="password" id="masterPassword" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-gray-500" placeholder="Introduce tu contraseña" onkeypress="if(event.key==='Enter')unlockVault()">
+                    </div>
+                    <button onclick="unlockVault()" class="btn-primary w-full py-3 rounded-xl font-semibold text-white mt-6 touch-feedback">
+                        Desbloquear
+                    </button>
+                </div>
+                <p class="text-center mt-4 text-sm text-gray-500">Los datos se almacenan localmente en tu dispositivo</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden min-h-screen p-4 md:p-8 safe-top safe-bottom">
+        <!-- Header -->
+        <header class="glass rounded-2xl p-4 md:p-6 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">Vault</h1>
+                    <p class="text-sm text-gray-400"><span id="passwordCount">0</span> contraseñas guardadas</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="showGenerator()" class="px-4 py-2 glass rounded-lg hover:bg-white/10 transition flex items-center gap-2 text-sm touch-feedback">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Generador
+                </button>
+                <button onclick="lockVault()" class="px-4 py-2 glass rounded-lg hover:bg-white/10 transition flex items-center gap-2 text-sm text-red-400 touch-feedback">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    Bloquear
+                </button>
+            </div>
+        </header>
+
+        <!-- Search and Add -->
+        <div class="glass rounded-2xl p-4 mb-6 flex flex-col md:flex-row gap-4 sticky top-4 z-30">
+            <div class="flex-1 relative">
+                <svg class="w-5 h-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" id="searchInput" oninput="searchPasswords()" class="input-field w-full pl-12 pr-4 py-3 rounded-xl text-white placeholder-gray-500" placeholder="Buscar contraseñas...">
+            </div>
+            <button onclick="showAddModal()" class="btn-primary px-6 py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 whitespace-nowrap touch-feedback">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span class="hidden md:inline">Añadir Nueva</span>
+                <span class="md:hidden">Añadir</span>
+            </button>
+        </div>
+
+        <!-- Passwords Grid -->
+        <div id="passwordsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+            <!-- Las contraseñas se generan dinámicamente aquí -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-20">
+            <div class="w-24 h-24 glass rounded-full mx-auto mb-6 flex items-center justify-center">
+                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">No hay contraseñas guardadas</h3>
+            <p class="text-gray-400">Añade tu primera contraseña para empezar</p>
+        </div>
+
+        <!-- FAB para móvil -->
+        <button onclick="showAddModal()" class="md:hidden fixed bottom-6 right-6 w-14 h-14 btn-primary rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/40 z-40 touch-feedback">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm safe-top safe-bottom overflow-y-auto">
+        <div class="glass rounded-2xl p-6 w-full max-w-lg modal-enter my-auto">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6">Añadir Contraseña</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Sitio Web / Servicio</label>
+                    <input type="text" id="siteName" class="input-field w-full px-4 py-3 rounded-xl text-white" placeholder="ej. Netflix, Gmail, Banco...">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Usuario / Email</label>
+                    <input type="text" id="username" class="input-field w-full px-4 py-3 rounded-xl text-white" placeholder="usuario@email.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Contraseña</label>
+                    <div class="relative">
+                        <input type="password" id="password" class="input-field w-full px-4 py-3 rounded-xl text-white pr-12" placeholder="••••••••">
+                        <button onclick="togglePasswordVisibility('password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white p-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        </button>
+                    </div>
+                    <div class="mt-2 flex gap-2">
+                        <button onclick="generateAndFill()" class="text-xs px-3 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 transition touch-feedback">
+                            Generar segura
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-300">Notas (opcional)</label>
+                    <textarea id="notes" rows="3" class="input-field w-full px-4 py-3 rounded-xl text-white resize-none" placeholder="Notas adicionales..."></textarea>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl font-semibold glass hover:bg-white/10 transition touch-feedback">Cancelar</button>
+                <button onclick="savePassword()" class="flex-1 py-3 rounded-xl font-semibold btn-primary text-white touch-feedback">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generator Modal -->
+    <div id="generatorModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm safe-top safe-bottom">
+        <div class="glass rounded-2xl p-6 w-full max-w-md modal-enter">
+            <h2 class="text-2xl font-bold mb-6">Generador de Contraseñas</h2>
+            
+            <div class="glass-card rounded-xl p-6 mb-6 text-center relative group">
+                <div id="generatedPassword" class="text-xl md:text-2xl font-mono font-bold text-indigo-300 break-all mb-2">Click generar</div>
+                <button onclick="copyGenerated()" class="absolute top-2 right-2 p-2 rounded-lg bg-white/10 opacity-0 group-hover:opacity-100 transition touch-feedback">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-sm text-gray-300">Longitud: <span id="lengthValue" class="text-white font-bold">16</span></label>
+                    </div>
+                    <input type="range" id="lengthSlider" min="8" max="32" value="16" oninput="updateLength(this.value)" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 touch-feedback">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer touch-feedback p-2 rounded-lg hover:bg-white/5">
+                        <input type="checkbox" id="useUpper" checked class="w-4 h-4 rounded border-gray-600 text-indigo-500 focus:ring-indigo-500 bg-gray-700">
+                        <span class="text-sm">Mayúsculas (A-Z)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer touch-feedback p-2 rounded-lg hover:bg-white/5">
+                        <input type="checkbox" id="useLower" checked class="w-4 h-4 rounded border-gray-600 text-indigo-500 focus:ring-indigo-500 bg-gray-700">
+                        <span class="text-sm">Minúsculas (a-z)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer touch-feedback p-2 rounded-lg hover:bg-white/5">
+                        <input type="checkbox" id="useNumbers" checked class="w-4 h-4 rounded border-gray-600 text-indigo-500 focus:ring-indigo-500 bg-gray-700">
+                        <span class="text-sm">Números (0-9)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer touch-feedback p-2 rounded-lg hover:bg-white/5">
+                        <input type="checkbox" id="useSymbols" checked class="w-4 h-4 rounded border-gray-600 text-indigo-500 focus:ring-indigo-500 bg-gray-700">
+                        <span class="text-sm">Símbolos (!@#)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="closeGenerator()" class="flex-1 py-3 rounded-xl font-semibold glass hover:bg-white/10 transition touch-feedback">Cerrar</button>
+                <button onclick="generatePassword()" class="flex-1 py-3 rounded-xl font-semibold btn-primary text-white touch-feedback">Generar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 safe-bottom"></div>
+
+<!-- ===================
+     Scripts
+     =================== -->
+<script src="app.js"></script>    
+
+</body>
+</html>    

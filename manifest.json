@@ -1,0 +1,22 @@
+{
+  "name": "Vault",
+  "short_name": "Vault",
+  "description": "Secure offline password manager",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCBmaWxsPSIjNDYzOGNhIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyMCIvPjxwYXRoIGZpbGw9IndoaXRlIiBkPSJNMjU2IDY0Yy03MC43IDAtMTI4IDU3LjMtMTI4IDEyOHYxMjhoMjU2VjE5MmMwLTcwLjctNTcuMy0xMjgtMTI4LTEyOHptMCA2NGMzNS4zIDAgNjQgMjguNyA2NCA2NHMtMjguNyA2NC02NCA2NC02NC0yOC43LTY0LTY0IDI4LjctNjQgNjQtNjR6bTEyOCAxOTJIMTI4djY0YzAgNzAuNyA1Ny4zIDEyOCAxMjggMTI4czEyOC01Ny4zIDEyOC0xMjh2LTY0eiIvPjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["security", "utilities"],
+  "lang": "es",
+  "dir": "ltr"
+}
